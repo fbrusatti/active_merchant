@@ -93,7 +93,8 @@ module ActiveMerchant #:nodoc:
           :amount     => amount(money),
           :pan        => creditcard.number,
           :expdate    => expdate(creditcard),
-          :crypt_type => options[:crypt_type] || @options[:crypt_type]
+          :crypt_type => options[:crypt_type] || @options[:crypt_type],
+          :cvd_value  => creditcard.verification_value
         }
       end
       
@@ -121,7 +122,8 @@ module ActiveMerchant #:nodoc:
 
         Response.new(successful?(response), message_from(response[:message]), response,
           :test          => test?,
-          :authorization => authorization_from(response)
+          :authorization => authorization_from(response),
+          :cvv_result    => cvv_response(response)
         )
       end
       
@@ -132,6 +134,12 @@ module ActiveMerchant #:nodoc:
         end
       end
       
+      # Franco Changes
+      # The CVD response is an alphanumeric value of 2 fields. The first field is the numeric CVD indicator sent in the request;
+      # the second field would be the response code. Here we take only the last one code if there exits a response of CVV.
+      def cvv_response(response={})
+          response[:cvd_result_code] ? response[:cvd_result_code].last : ''
+      end
       # Tests for a successful response from Moneris' servers
       def successful?(response)
         response[:response_code] && 
@@ -164,7 +172,15 @@ module ActiveMerchant #:nodoc:
         actions[action].each do |key|
           transaction.add_element(key.to_s).text = parameters[key] unless parameters[key].blank?
         end
-        
+
+        # Franco Brusatti
+        # If the cvd_value is present then add the block of cvd_info
+        unless parameters[:cvd_value].blank?
+          cvd_information = transaction.add_element("cvd_info")
+          cvd_information.add_element("cvd_indicator").text = 1
+          cvd_information.add_element("cvd_value").text = parameters[:cvd_value]
+        end
+
         xml.to_s
       end
     
