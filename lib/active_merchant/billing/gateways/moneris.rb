@@ -134,12 +134,11 @@ module ActiveMerchant #:nodoc:
         end
       end
       
-      # Franco Changes
-      # The CVD response is an alphanumeric value of 2 fields. The first field is the numeric CVD indicator sent in the request;
-      # the second field would be the response code. Here we take only the last one code if there exits a response of CVV.
+      # Return the CVD response, in fact, it only returns the last code, which is enough to know if the cvv was ok or not. 
       def cvv_response(response={})
           response[:cvd_result_code] ? response[:cvd_result_code].last : ''
       end
+
       # Tests for a successful response from Moneris' servers
       def successful?(response)
         response[:response_code] && 
@@ -173,8 +172,7 @@ module ActiveMerchant #:nodoc:
           transaction.add_element(key.to_s).text = parameters[key] unless parameters[key].blank?
         end
 
-        # Franco Brusatti
-        # If the cvd_value is present then add the block of cvd_info
+        # If the cvd_value is present then add the corresponding block of cvd_info
         unless parameters[:cvd_value].blank?
           cvd_information = transaction.add_element("cvd_info")
           cvd_information.add_element("cvd_indicator").text = 1
